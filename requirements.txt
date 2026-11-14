@@ -1,0 +1,22 @@
+# Web UI + backend
+streamlit==1.67.0
+
+# PDF parsing
+pypdf==7.1.0
+
+# Local embeddings (all-MiniLM-L6-v2 on CPU).
+# torch is pulled in by sentence-transformers. On Linux the default PyPI build
+# bundles GPU libraries; the Dockerfile installs the much smaller CPU-only
+# build first, which satisfies this line.
+sentence-transformers==6.3.0
+torch>=2.2
+
+# In-memory vector search
+faiss-cpu==1.16.0
+numpy>=1.26,<3
+
+# Gemini SDK
+google-genai==3.3.0
+
+# Loads GEMINI_API_KEY from a local .env file during development
+python-dotenv==1.2.4
