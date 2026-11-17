@@ -1,0 +1,6 @@
+# Everything the app needs, plus the tools for testing and linting it.
+#   pip install -r requirements-dev.txt
+-r requirements.txt
+
+pytest==9.2.0
+ruff==0.17.5

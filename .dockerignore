@@ -1,0 +1,20 @@
+# Keeps secrets and local clutter out of the Docker build context.
+
+# Secrets
+.env
+.env.*
+**/.env
+**/.env.*
+.streamlit/secrets.toml
+
+# Not needed to run the app
+.git
+.venv
+venv
+tests
+**/__pycache__
+**/*.py[cod]
+.cache
+.pytest_cache
+.mypy_cache
+.ruff_cache

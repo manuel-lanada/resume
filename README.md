@@ -22,11 +22,22 @@ visitor question ──embed──▶ top 4 chunks ──▶ Gemini ──▶ fi
 
 | File | Purpose |
 |---|---|
-| `app.py` | The whole app: PDF ingestion, FAISS index, Gemini call, Streamlit chat UI |
-| `requirements.txt` | Python dependencies |
-| `Dockerfile` | Container image for Render or any Docker host |
+| `app.py` | Entry point for `streamlit run`. It only calls `main()` in the package below |
+| `digital_twin/settings.py` | Everything you can tune: models, chunking, limits, starter questions |
+| `digital_twin/prompts.py` | The system prompt and the per-question prompt |
+| `digital_twin/ingestion.py` | PDF to clean text to overlapping chunks |
+| `digital_twin/retrieval.py` | Embeddings, the FAISS index and nearest-chunk search |
+| `digital_twin/llm.py` | Gemini client, request assembly, streaming, error messages |
+| `digital_twin/conversation.py` | Chat messages and which of them are replayed to the LLM |
+| `digital_twin/ui/` | The Streamlit app: `page.py` (flow of a page run), `sidebar.py`, `chat.py`, `state.py` (session state), `resources.py` (cached models, API key) |
+| `tests/` | Test suite (see [Development](#development)) |
+| `requirements.txt` | Python dependencies of the app |
+| `requirements-dev.txt` | The same, plus `pytest` and `ruff` |
+| `Dockerfile`, `.dockerignore` | Container image for Render or any Docker host |
 | `.gitignore` | Keeps `.env`, caches and virtualenvs out of Git |
 | `resume.pdf` | **You add this.** Your resume as a text-based PDF |
+
+Only `digital_twin/ui/` imports Streamlit. The other modules are plain Python, which is what lets the tests exercise them without starting the app or loading a model.
 
 ## Quickstart (local)
 
@@ -67,7 +78,7 @@ All settings are environment variables. Only the first is required.
 
 > **About `gemini-2.5-flash`:** Google's [deprecations page](https://ai.google.dev/gemini-api/docs/deprecations) (checked November 2026) lists no shutdown date for it, but says access to 2.5 models is limited to accounts that have used them before. If the chat replies that the model is not available for your key, set `GEMINI_MODEL` to a current model such as `gemini-3.8-flash`. No code change is needed.
 
-Chunk size, overlap, number of retrieved chunks, the starter questions and the system prompt are constants at the top of `app.py`.
+Chunk size, overlap, number of retrieved chunks and the starter questions are constants in `digital_twin/settings.py`. The system prompt is in `digital_twin/prompts.py`.
 
 ## Run with Docker
 
@@ -77,6 +88,19 @@ docker run --rm -p 8501:8501 -e GEMINI_API_KEY=your-key-here digital-twin
 ```
 
 The image installs CPU-only PyTorch and bakes in the embedding model, so the container starts without downloading anything. `resume.pdf` is copied into the image at build time; rebuild after you change it.
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+
+pytest                   # fast and offline: no model download, no API calls
+pytest -m integration    # also loads the real embedding model
+pytest -m live           # runs the whole app with one real Gemini request (needs GEMINI_API_KEY)
+ruff check .             # lint
+```
+
+The default run replaces the embedding model and the Gemini client with fakes (`tests/support.py`) and drives `app.py` through Streamlit's `AppTest` harness, so it covers the UI without a browser. A dummy API key is set for these tests, so the key in your `.env` is only ever used by `pytest -m live`.
 
 ## Deploy
 
@@ -141,7 +165,7 @@ Every push to `main` triggers a new deploy.
 
 ## Notes for a public URL
 
-- **Quota:** anyone with the link uses your Gemini key. The app caps each browser session at 40 questions of 500 characters (constants in `app.py`). Also set a quota or budget alert on the key in Google AI Studio.
+- **Quota:** anyone with the link uses your Gemini key. The app caps each browser session at 40 questions of 500 characters (constants in `digital_twin/settings.py`). Also set a quota or budget alert on the key in Google AI Studio.
 - **Data flow:** resume excerpts and visitor questions are sent to the Gemini API. Embedding and search happen on your server.
 - **Uploads:** a PDF uploaded in the sidebar is processed in memory for that visitor's session only. It does not replace your resume for other visitors.
 - **Accuracy:** the twin is instructed to answer only from the resume and to say so when something is not there, but language models can still make mistakes. Use the **Show resume excerpts used** toggle in the sidebar to see what each answer was based on.
@@ -152,7 +176,9 @@ Every push to `main` triggers a new deploy.
 |---|---|
 | Setup checklist instead of the chat | Add `resume.pdf` next to `app.py` and set `GEMINI_API_KEY`, then restart. |
 | "No selectable text was found in this PDF" | The PDF is a scan. Export the resume from Word or Google Docs as a PDF instead. |
+| "I couldn't load my embedding model" | The first start must download the model from Hugging Face. Check that the server can reach huggingface.co and that `EMBEDDING_MODEL` names a real sentence-transformers model. The full error is in the server log. |
 | "The Gemini model ... is not available for this API key" | Set `GEMINI_MODEL` to a model your key can use. |
 | "My Gemini API key was rejected" | Re-copy the key; check it is enabled in AI Studio. |
 | Render deploy keeps restarting | Out of memory. Use a 2 GB plan or deploy on Streamlit Community Cloud. |
-| Answers miss details that are in the resume | Raise `TOP_K` or `CHUNK_SIZE` in `app.py`. |
+| Answers miss details that are in the resume | Raise `TOP_K` or `CHUNK_SIZE` in `digital_twin/settings.py`. |
+| "Invalid chunking settings" | `CHUNK_OVERLAP` may be at most half of `CHUNK_SIZE`. |

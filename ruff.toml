@@ -1,0 +1,14 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # import order
+    "UP",       # modern Python idioms
+    "B",        # likely bugs
+    "SIM",      # simplifications
+    "C4",       # comprehensions
+    "PT",       # pytest style
+]

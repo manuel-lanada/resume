@@ -34,8 +34,9 @@ RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTr
 # 4) App code and the resume. The [f] pattern lets the build succeed even if
 #    resume.pdf is not there (the app then shows its setup message).
 #    Files are copied by name on purpose, so a local .env can never end up
-#    inside the image.
+#    inside the image (.dockerignore guards the package folder as well).
 COPY --chown=appuser:appuser app.py resume.pd[f] ./
+COPY --chown=appuser:appuser digital_twin ./digital_twin
 
 # Render (and most hosts) tell the container which port to use via $PORT.
 # Locally it falls back to Streamlit's default, 8501.
